@@ -1,0 +1,33 @@
+{
+  "name": "agent-audit",
+  "version": "0.1.0",
+  "description": "Security scanner for AI agents. Find vulnerabilities in your agent setup in 30 seconds.",
+  "bin": {
+    "agent-audit": "./dist/cli.js"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli.js"
+  },
+  "keywords": [
+    "ai-agents",
+    "security",
+    "audit",
+    "mcp",
+    "agent-identity",
+    "llm-security",
+    "ai-security"
+  ],
+  "author": "Authora <admin@authora.dev> (https://authora.dev)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/authora-dev/agent-audit"
+  },
+  "homepage": "https://authora.dev",
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.5"
+  }
+}
