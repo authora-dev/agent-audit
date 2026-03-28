@@ -8,14 +8,16 @@ const targetDir = args[0] ?? ".";
 const jsonOutput = args.includes("--json");
 const badgeOutput = args.includes("--badge");
 
-console.log("");
-console.log("  \x1b[1m\x1b[36mAgent Security Audit\x1b[0m");
-console.log("  \x1b[90mby Authora -- https://authora.dev\x1b[0m");
-console.log("");
-console.log(`  Scanning ${targetDir === "." ? "current directory" : targetDir}...`);
-console.log("");
-
 async function main() {
+  if (!jsonOutput) {
+    console.log("");
+    console.log("  \x1b[1m\x1b[36mAgent Security Audit\x1b[0m");
+    console.log("  \x1b[90mby Authora -- https://authora.dev\x1b[0m");
+    console.log("");
+    console.log(`  Scanning ${targetDir === "." ? "current directory" : targetDir}...`);
+    console.log("");
+  }
+
   const findings = await scanDirectory(targetDir);
 
   if (jsonOutput) {
