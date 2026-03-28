@@ -243,21 +243,22 @@ export async function scanDirectory(dir: string): Promise<ScanResult> {
     });
   }
 
-  // Calculate score (0-10)
-  const criticals = findings.filter((f) => f.severity === "critical").length;
-  const warnings = findings.filter((f) => f.severity === "warning").length;
-  const infos = findings.filter((f) => f.severity === "info").length;
+  // Calculate score (0-10) based on CATEGORIES not raw count
+  // This prevents large codebases from being penalized for having many files
+  const criticalCategories = new Set(findings.filter((f) => f.severity === "critical").map((f) => f.category));
+  const warningCategories = new Set(findings.filter((f) => f.severity === "warning").map((f) => f.category));
+  const infoCategories = new Set(findings.filter((f) => f.severity === "info").map((f) => f.category));
 
   let score = 10;
-  score -= criticals * 2.5;
-  score -= warnings * 1;
-  score -= infos * 0.25;
+  score -= criticalCategories.size * 2.5;
+  score -= warningCategories.size * 1.5;
+  score -= infoCategories.size * 0.5;
 
-  // Bonus for good practices
+  // Bonus for good practices (max +4)
   if (hasIdentityLayer) score += 1;
-  if (hasDelegation) score += 0.5;
-  if (hasAuditLog) score += 0.5;
-  if (hasApprovals) score += 0.5;
+  if (hasDelegation) score += 1;
+  if (hasAuditLog) score += 1;
+  if (hasApprovals) score += 1;
 
   score = Math.max(0, Math.min(10, Math.round(score * 10) / 10));
 
