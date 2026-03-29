@@ -1,7 +1,7 @@
 {
-  "name": "agent-audit",
-  "version": "0.1.0",
-  "description": "Security scanner for AI agents. Find vulnerabilities in your agent setup in 30 seconds.",
+  "name": "@authora/agent-audit",
+  "version": "0.2.0",
+  "description": "Security scanner for AI agents and MCP servers. Scan local codebases or remote MCP servers in seconds.",
   "bin": {
     "agent-audit": "./dist/cli.js"
   },
@@ -15,9 +15,11 @@
     "security",
     "audit",
     "mcp",
+    "model-context-protocol",
     "agent-identity",
     "llm-security",
-    "ai-security"
+    "ai-security",
+    "mcp-security"
   ],
   "author": "Authora <admin@authora.dev> (https://authora.dev)",
   "license": "MIT",
