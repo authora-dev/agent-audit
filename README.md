@@ -1,12 +1,113 @@
 # agent-audit
 
-> Security scanner for AI agents. Find vulnerabilities in your agent setup in 30 seconds.
+> Security scanner for AI agents and MCP servers. Find vulnerabilities in 30 seconds.
+
+Two modes: scan your **local codebase** for agent security issues, or audit a **remote MCP server** for tool-level risks.
+
+## Quick start
 
 ```bash
-npx agent-audit
+# Scan local codebase
+npx @authora/agent-audit
+
+# Scan a remote MCP server
+npx @authora/agent-audit mcp https://mcp.example.com
+
+# With authentication
+npx @authora/agent-audit mcp https://mcp.example.com --api-key YOUR_KEY
 ```
 
-## What it checks
+## MCP server scanning
+
+Connects to any MCP server, discovers all tools, and classifies each one by risk level.
+
+```bash
+npx @authora/agent-audit mcp <url> [options]
+```
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `--api-key <key>` | Authenticate with an API key (sent as `api-key` header) |
+| `--bearer <token>` | Authenticate with a Bearer token |
+| `--json` | Output raw JSON (for CI pipelines) |
+| `--fail-below <grade>` | Exit with code 1 if grade is below threshold (A+, A, B+, B, C, D) |
+
+**Examples:**
+
+```bash
+# Scan with API key authentication
+npx @authora/agent-audit mcp https://mcp.authora.dev --api-key authora_live_xxx
+
+# JSON output for CI
+npx @authora/agent-audit mcp https://my-server.com --bearer sk-xxx --json
+
+# Fail CI if grade drops below B
+npx @authora/agent-audit mcp https://my-server.com --api-key xxx --fail-below B
+```
+
+**Sample output:**
+
+```
+  MCP Security Audit  via REST /tools
+  --------------------------------------------------
+
+    B   Grade  65/100  AUTH
+
+  128 tools  63 safe  45 review  20 dangerous
+
+  Dangerous tools:
+  * authora_suspend_agent -- Suspend an active agent
+  * authora_revoke_agent -- Permanently revoke an agent
+  * authora_delete_role -- Delete a role by ID
+  ...
+
+  Needs review:
+  * authora_create_agent -- Create a new Authora agent in a workspace
+  * authora_update_agent -- Update an existing agent
+  ...
+
+  README badge:
+  ![MCP Security: B](https://img.shields.io/badge/MCP_Security-B-yellow)
+```
+
+**Tool classification:**
+
+| Level | Keywords | Meaning |
+|-------|----------|---------|
+| Safe | get, list, search, verify, audit, health, describe... | Read-only operations |
+| Needs Review | create, update, assign, configure, send, rotate... | State-changing mutations |
+| Dangerous | delete, revoke, suspend, destroy, kill, force, reset... | Destructive or privilege-escalating |
+
+**Scoring:**
+
+Score is based on the ratio of safe vs dangerous tools, not absolute counts. A server with many tools but few dangerous ones scores well. Authentication adds 10 points.
+
+| Grade | Score | Typical server |
+|-------|-------|----------------|
+| A+ | 90-100 | Read-only analytics, monitoring |
+| A | 80-89 | Well-scoped API with auth |
+| B+/B | 60-79 | Full CRUD platform with auth |
+| C | 50-59 | Broad API, no auth |
+| D/F | 0-49 | Mostly destructive, undocumented |
+
+## Local codebase scanning
+
+Scans your project files for agent security issues.
+
+```bash
+npx @authora/agent-audit [directory] [options]
+```
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `--json` | Output as JSON |
+| `--badge` | Generate README badge markdown |
+
+**What it checks:**
 
 | Category | What it finds |
 |----------|--------------|
@@ -19,7 +120,7 @@ npx agent-audit
 | **Approvals** | No human-in-the-loop for sensitive operations |
 | **Resilience** | Missing timeouts, no error handling on tool calls |
 
-## Output
+**Sample output:**
 
 ```
   Agent Security Audit
@@ -32,58 +133,29 @@ npx agent-audit
 
   CRITICAL  Shared API key may be used by 3 agent files (.env)
   CRITICAL  No agent identity layer detected
-  CRITICAL  2 MCP server(s) found but no agent identity
-  WARNING   MCP server detected without visible auth configuration (mcp/server.ts)
-  WARNING   No delegation chains -- agents may inherit unlimited permissions
-  WARNING   No audit logging for agent actions detected
-  INFO      No approval workflows for sensitive agent actions
+  WARNING   MCP server without visible auth configuration (mcp/server.ts)
+  WARNING   No delegation chains
 
-  Security Posture:
-    Identity layer:     No
-    Delegation chains:  No
-    Audit logging:      No
-    Approval workflows: No
-
-  Agent Security Score: 1.5/10  [===                     ]  Grade: F
-  3 critical, 3 warnings
-
-  Learn more: https://github.com/authora-dev/awesome-agent-security
-  Fix issues: https://authora.dev/get-started
+  Agent Security Score: 1.5/10  Grade: F
 ```
 
-## Options
+## CI integration
 
-```bash
-npx agent-audit [directory]     # Scan a specific directory
-npx agent-audit --json          # Output as JSON
-npx agent-audit --badge         # Generate README badge markdown
+```yaml
+# GitHub Actions
+- name: MCP Security Gate
+  run: npx @authora/agent-audit mcp ${{ secrets.MCP_URL }} --api-key ${{ secrets.MCP_KEY }} --fail-below B
 ```
 
-## Badge
+## Web inspector
 
-Add a security badge to your README:
-
-```markdown
-![Agent Security: A](https://img.shields.io/badge/Agent_Security-A-brightgreen)
-```
-
-## What scores mean
-
-| Score | Grade | Meaning |
-|-------|-------|---------|
-| 9-10 | A+ | Excellent -- cryptographic identity, delegation, audit, approvals |
-| 8 | A | Strong -- identity layer present, minor gaps |
-| 7 | B+ | Good -- most practices in place |
-| 6 | B | Decent -- some security measures, gaps remain |
-| 5 | C | Needs work -- basic security only |
-| 3-4 | D | Weak -- significant vulnerabilities |
-| 0-2 | F | Critical -- no agent security measures |
+Prefer a browser UI? Use the [MCP Security Inspector](https://mcp.authora.dev/inspect) -- same scanner, visual interface.
 
 ## Learn more
 
-- [Awesome Agent Security](https://github.com/authora-dev/awesome-agent-security) -- curated resources
+- [awesome-agent-security](https://github.com/authora-dev/awesome-agent-security) -- curated resources
 - [Authora](https://authora.dev) -- identity, coordination, and security for AI agents
-- [Authora Docs](https://authora.dev/developers/quickstart) -- get started in 5 minutes
+- [Authora MCP docs](https://authora.dev/developers/mcp) -- securing MCP with Authora
 
 ## License
 
