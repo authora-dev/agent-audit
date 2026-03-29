@@ -43,16 +43,62 @@ export function formatReport(result: ScanResult): string {
   lines.push(`  ${COLORS.gray}Found ${result.agents} agent(s), ${result.mcpServers} MCP server(s)${COLORS.reset}`);
   lines.push("");
 
-  // Findings
-  if (result.findings.length === 0) {
+  // Findings -- sorted by severity (INFO -> WARNING -> CRITICAL) so the most
+  // important items are the last thing the user sees before the summary.
+  const SEVERITY_ORDER: Record<string, number> = { pass: 0, info: 1, warning: 2, critical: 3 };
+
+  const sorted = [...result.findings].sort(
+    (a, b) => (SEVERITY_ORDER[a.severity] ?? 0) - (SEVERITY_ORDER[b.severity] ?? 0),
+  );
+
+  if (sorted.length === 0) {
     lines.push(`  ${COLORS.green}${COLORS.bold}No issues found!${COLORS.reset}`);
   } else {
-    for (const f of result.findings) {
-      const label = SEVERITY_LABEL[f.severity] ?? f.severity;
-      const file = f.file ? ` ${COLORS.gray}(${f.file})${COLORS.reset}` : "";
-      lines.push(`  ${label}  ${f.message}${file}`);
-      if (f.fix) {
-        lines.push(`           ${COLORS.gray}Fix: ${f.fix}${COLORS.reset}`);
+    // Group consecutive INFO findings that share the same message+fix to reduce noise
+    let i = 0;
+    while (i < sorted.length) {
+      const f = sorted[i];
+
+      if (f.severity === "info") {
+        // Collect all consecutive info findings with the same message
+        const group = [f];
+        while (
+          i + group.length < sorted.length &&
+          sorted[i + group.length].severity === "info" &&
+          sorted[i + group.length].message === f.message
+        ) {
+          group.push(sorted[i + group.length]);
+        }
+        i += group.length;
+
+        const label = SEVERITY_LABEL[f.severity] ?? f.severity;
+        if (group.length > 1) {
+          // Show one collapsed line with count and sample files
+          const sampleFiles = group
+            .filter((g) => g.file)
+            .slice(0, 3)
+            .map((g) => g.file);
+          const extra = group.length - sampleFiles.length;
+          const fileHint = sampleFiles.length > 0
+            ? ` ${COLORS.gray}(${sampleFiles.join(", ")}${extra > 0 ? ` +${extra} more` : ""})${COLORS.reset}`
+            : "";
+          lines.push(`  ${label}  ${f.message} ${COLORS.gray}[${group.length} files]${COLORS.reset}${fileHint}`);
+        } else {
+          const file = f.file ? ` ${COLORS.gray}(${f.file})${COLORS.reset}` : "";
+          lines.push(`  ${label}  ${f.message}${file}`);
+        }
+        if (f.fix) {
+          lines.push(`           ${COLORS.gray}Fix: ${f.fix}${COLORS.reset}`);
+        }
+      } else {
+        // WARNING / CRITICAL -- always print individually
+        const label = SEVERITY_LABEL[f.severity] ?? f.severity;
+        const file = f.file ? ` ${COLORS.gray}(${f.file})${COLORS.reset}` : "";
+        lines.push(`  ${label}  ${f.message}${file}`);
+        if (f.fix) {
+          lines.push(`           ${COLORS.gray}Fix: ${f.fix}${COLORS.reset}`);
+        }
+        i++;
       }
     }
   }
